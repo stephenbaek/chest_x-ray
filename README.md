@@ -14,4 +14,5 @@ $ pip install matplotlib
 ```
 
 ## Segmentation
-
+### Datasets
+See [data/README.md](data/README.md) for the details
