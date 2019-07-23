@@ -20,7 +20,7 @@ def load_image(filepath):
     HEIGHT = 384
     
     # Read raw image (string of pixel values)
-    image = tf.read_file(filepath)
+    image = tf.io.read_file(filepath)
     
     # Decode the raw image into pixel array
 #     image = tf.image.decode_image(image)    # This is supposed to do the same thing as below, but there seems to be a bug in TensorFlow...
@@ -114,7 +114,7 @@ def image_map(image, src, dst):
 # TODO(stephen_baek): test with image aspect ratios other than 1:1
 # TODO(stephen_baek): comment & document
 def affine_transform(image, trans=(0.0,0.0), rot=0.0, scale=(1.0,1.0), shear=(0.0, 0.0)):
-  M = to_affine_transform_matrix(origin=(tf.cast(image.shape[1],tf.int32)//2, tf.cast(image.shape[0],tf.int32)//2), trans=trans, rot=rot, scale=scale, shear=shear)
+  M = to_affine_transform_matrix(origin=(tf.cast(image.shape[1],tf.float32)/2, tf.cast(image.shape[0],tf.float32)/2), trans=trans, rot=rot, scale=scale, shear=shear)
   
   I = tf.tile(tf.expand_dims(tf.range(image.shape[1]), axis=0), [image.shape[1],1])
   J = tf.tile(tf.expand_dims(tf.range(image.shape[0]), axis=1), [1,image.shape[0]])
