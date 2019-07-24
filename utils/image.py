@@ -7,6 +7,7 @@ Written by Stephen Baek
 """
 
 import tensorflow as tf
+import numpy as np
 
 # TODO(stephen-baek): make the output size controllable
 def load_image(filepath):
@@ -32,6 +33,26 @@ def load_image(filepath):
     image = tf.cast(image, tf.float32)     # Make sure the pixel values are in floating point numbers, NOT INTEGERS
     image = tf.image.resize(image, [HEIGHT, WIDTH])
     image /= 255.0
+    
+    return image
+
+# TODO(stephen-baek): Can user set the distortion parameters?
+def random_transform(image):
+    """Apply random transformation to the image
+    image: [Height, Width, Channels].
+    
+    Returns:
+        M: [Height, Width, Channels] tensor. Transformed image.
+    """
+    trans = tf.random.normal([2], mean=0.0, stddev=10)
+    rot = tf.random.normal([1], mean=0.0, stddev=np.pi/24)
+    scale = tf.random.normal([2], mean=1.0, stddev=0.1)
+    shear = tf.random.normal([2], mean=0.0, stddev=0.05)
+    lens = tf.random.normal([1], mean=0.0, stddev=0.1)
+    
+#    image = lens_distortion(image, lens)
+    # TODO(stephen-baek): Make it accept tf tensor directly, instead of the tuples
+    image = affine_transform(image, trans=(trans[0], trans[1]), rot=rot[0], scale=(scale[0], scale[1]), shear=(shear[0], shear[1]))
     
     return image
 
@@ -124,12 +145,12 @@ def affine_transform(image, trans=(0.0,0.0), rot=0.0, scale=(1.0,1.0), shear=(0.
 
   new_coords = tf.transpose(tf.concat([I, J, K], axis=1))
 
-  Minv = tf.matrix_inverse(M)
+  Minv = tf.linalg.inv(M)
 
   coords = tf.matmul(Minv, new_coords)
 
   new_coords = tf.cast(new_coords, tf.int32)
-  coords = tf.cast(coords, tf.int32)
+  coords = tf.cast(tf.math.round(coords), tf.int32)
 
   new_coords = tf.transpose(tf.slice(new_coords, [0, 0], [2, -1]))   # drop the homogeneous coordinate
   coords = tf.transpose(tf.slice(coords, [0, 0], [2, -1]))
@@ -140,12 +161,12 @@ def affine_transform(image, trans=(0.0,0.0), rot=0.0, scale=(1.0,1.0), shear=(0.
 # TODO: Bilinear interpolation
 # TODO(stephen_baek): test with image aspect ratios other than 1:1
 # TODO(stephen_baek): comment & document
-def lens_distortion(image, k):
+def lens_distortion(image, k=0.0):
   w = tf.cast(image.shape[1], tf.float32)-1
   h = tf.cast(image.shape[0], tf.float32)-1
 
-  I = tf.reshape(tf.tile(tf.expand_dims(tf.linspace(-0.5, 0.5, image.shape[1]+1), axis=0), [image.shape[1],1]), (-1,1))
-  J = tf.reshape(tf.tile(tf.expand_dims(tf.linspace(-0.5, 0.5, image.shape[0]+1), axis=1), [1,image.shape[0]]), (-1,1))
+  I = tf.reshape(tf.tile(tf.expand_dims(tf.linspace(-0.5, 0.5, image.shape[1]), axis=0), [image.shape[1],1]), (-1,1))
+  J = tf.reshape(tf.tile(tf.expand_dims(tf.linspace(-0.5, 0.5, image.shape[0]), axis=1), [1,image.shape[0]]), (-1,1))
 
   new_coords = tf.concat([I, J], axis=1)
 
@@ -157,7 +178,7 @@ def lens_distortion(image, k):
   Iu = tf.cast((r*tf.cos(tf.squeeze(polar))+0.5)*w, tf.int32)
   Ju = tf.cast((r*tf.sin(tf.squeeze(polar))+0.5)*h, tf.int32)
   coords = tf.stack([Iu, Ju], axis=1)
-  new_coords = tf.cast((new_coords + 0.5)*[w,h], tf.int32)
+  new_coords = tf.cast(tf.math.round((new_coords + 0.5)*[w,h]), tf.int32)
 
 #   coords = tf.transpose(coords)
 #   new_coords = tf.transpose(new_coords)
