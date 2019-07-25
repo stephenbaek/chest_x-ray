@@ -4,6 +4,7 @@ import numpy as np
 import pathlib
 import random
 import os
+from datetime import datetime
 
 from utils.image import load_image
 from utils.image import random_transform
@@ -143,8 +144,8 @@ model.summary()
 
 # Train-test Split
 train_size = int(montgomery_count*0.7)
-val_size = int(montgomery_count*0.15)
-test_size = int(montgomery_count*0.15)
+val_size = int(montgomery_count*0.1)
+test_size = int(montgomery_count*0.2)
 montgomery_ds = montgomery_ds.shuffle( reshuffle_each_iteration = False, buffer_size=montgomery_count )
 train_ds = montgomery_ds.take(train_size)
 test_ds = montgomery_ds.skip(train_size)
@@ -153,6 +154,7 @@ test_ds = test_ds.take(test_size)
 
 # Setting a shuffle buffer size as large as the dataset ensures that the data is
 # completely shuffled.
+# TODO: Use `tf.data.Dataset.shuffle(buffer_size, seed)` followed by `tf.data.Dataset.repeat(count)`. Static tf.data optimizations will take care of using the fused implementation.
 BATCH_SIZE=8
 train_ds = train_ds.apply( tf.data.experimental.shuffle_and_repeat(buffer_size=train_size) )
 train_ds = train_ds.batch(BATCH_SIZE)
@@ -163,7 +165,14 @@ val_ds = val_ds.prefetch(buffer_size=AUTOTUNE)
 
 test_ds = test_ds.batch(BATCH_SIZE)
 
-model.fit(train_ds, epochs=10, steps_per_epoch=train_size/BATCH_SIZE, validation_data=val_ds)
+# Tensorboard stuff
+logdir= os.path.join(*['logs', datetime.now().strftime("%Y%m%d-%H%M%S")])
+tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=logdir, batch_size=BATCH_SIZE, histogram_freq=1, write_grads=True)
+
+# Early stopping
+earlystopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=6)
+
+model.fit(train_ds, epochs=1000, steps_per_epoch=train_size/BATCH_SIZE, validation_data=val_ds, callbacks=[tensorboard_callback, earlystopping_callback])
 
 for n, pair in enumerate(test_ds.take(1)):
     image, mask = pair
