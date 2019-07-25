@@ -13,34 +13,7 @@ tf.compat.v1.enable_eager_execution()
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
-#image = load_image('./data/montgomery/images/MCUCXR_0001_0.png')
-#image = random_transform(image)
-#
-#mask_left = load_image('./data/montgomery/masks/left/MCUCXR_0001_0.png')
-#mask_right = load_image('./data/montgomery/masks/right/MCUCXR_0001_0.png')
-#mask = tf.logical_or(tf.greater(mask_left,0.5), tf.greater(mask_right,0.5))
-#mask = tf.cast(mask, tf.float32)
-#mask = random_transform(mask)
-
-#plt.imshow(tf.squeeze(image), cmap='gray')
-#plt.imshow(tf.concat([tf.clip_by_value(image+mask*0.1, 0.0, 1.0), image, image], axis=2))
-
-#def load_montgomery(path):
-#    filename = os.path.basename(path)
-#    image_dirname = os.path.dirname(path)
-#    dirname = os.path.split(image_dirname)[0]    
-#        
-#    mask_left_path = os.path.join(*[dirname, 'masks', 'left', filename])
-#    mask_right_path = os.path.join(*[dirname, 'masks', 'right', filename])
-#    
-#    image = load_image(path)
-#    mask_left = load_image(mask_left_path)
-#    mask_right = load_image(mask_right_path)
-#    
-#    mask = tf.logical_or(tf.greater(mask_left,0.5), tf.greater(mask_right,0.5))
-#    mask = tf.cast(mask, tf.float32)
-#    
-#    return image, mask
+# TODO: This should be moved to utils?
 def mask_merge(left, right):
     mask = tf.logical_or(tf.greater(left,0.5), tf.greater(right,0.5))
     mask = tf.cast(mask, tf.float32)
@@ -172,7 +145,11 @@ tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=logdir, batch_size
 # Early stopping
 earlystopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=6)
 
-model.fit(train_ds, epochs=1000, steps_per_epoch=train_size/BATCH_SIZE, validation_data=val_ds, callbacks=[tensorboard_callback, earlystopping_callback])
+# Check point
+checkpointdir = os.path.join(*['logs', 'weights', 'weights-{epoch:02d}-{val_acc:.2f}.hdf5'])
+checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
+
+model.fit(train_ds, epochs=1000, steps_per_epoch=train_size/BATCH_SIZE, validation_data=val_ds, callbacks=[tensorboard_callback, earlystopping_callback, checkpoint_callback])
 
 for n, pair in enumerate(test_ds.take(1)):
     image, mask = pair
