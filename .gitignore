@@ -2,11 +2,16 @@
 data/
 !data/README.md
 
+<<<<<<< HEAD
 # Pycharm stuff
 .idea/
 
 # Jupyter Notebook stuff
 .ipynb_checkpoints
+=======
+# Ignore tensorboard logs
+logs/
+>>>>>>> 83763bb4b48d18874c93403536c7e96925bc8eca
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
