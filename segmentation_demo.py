@@ -184,4 +184,12 @@ plt.show()
 
 
 
+path = str(pathlib.Path('../data/montgomery/images/MCUCXR_0001_0.png'))
 
+<<<<<<< HEAD
+image = load_image(path)
+print(image.shape)
+plt.imshow(np.squeeze(image), cmap='gray')
+plt.show()
+=======
+>>>>>>> 83763bb4b48d18874c93403536c7e96925bc8eca
