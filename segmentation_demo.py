@@ -105,20 +105,20 @@ merge9 = tf.keras.layers.concatenate([conv1,up9], axis = 3)
 conv9 = tf.keras.layers.Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge9)
 conv9 = tf.keras.layers.Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
 conv9 = tf.keras.layers.Conv2D(2, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
-conv10 = tf.keras.layers.Conv2D(1, 1, activation = 'sigmoid')(conv1)
+conv10 = tf.keras.layers.Conv2D(1, 1, activation = 'sigmoid')(conv9)
 
 model = tf.keras.Model(inputs, conv10)
 
 # TODO(stephen-baek): Implement IOU
-model.compile(optimizer=tf.keras.optimizers.Adam(lr=1e-4), loss='binary_crossentropy', metrics=['accuracy'])
+model.compile(optimizer=tf.keras.optimizers.Adam(lr=1e-3), loss='binary_crossentropy', metrics=['accuracy'])
 
 model.summary()
 
 
 # Train-test Split
 train_size = int(montgomery_count*0.7)
-val_size = int(montgomery_count*0.1)
-test_size = int(montgomery_count*0.2)
+val_size = int(montgomery_count*0.15)
+test_size = int(montgomery_count*0.15)
 montgomery_ds = montgomery_ds.shuffle( reshuffle_each_iteration = False, buffer_size=montgomery_count )
 train_ds = montgomery_ds.take(train_size)
 test_ds = montgomery_ds.skip(train_size)
@@ -133,10 +133,10 @@ train_ds = train_ds.apply( tf.data.experimental.shuffle_and_repeat(buffer_size=t
 train_ds = train_ds.batch(BATCH_SIZE)
 train_ds = train_ds.prefetch(buffer_size=AUTOTUNE)
 
-val_ds = val_ds.batch(BATCH_SIZE)
+val_ds = val_ds.batch(val_size)
 val_ds = val_ds.prefetch(buffer_size=AUTOTUNE)
 
-test_ds = test_ds.batch(BATCH_SIZE)
+test_ds = test_ds.batch(test_size)
 
 # Tensorboard stuff
 logdir= os.path.join(*['logs', datetime.now().strftime("%Y%m%d-%H%M%S")])
@@ -147,9 +147,10 @@ earlystopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', pa
 
 # Check point
 checkpointdir = os.path.join(*['logs', 'weights', 'weights-{epoch:02d}-{val_acc:.2f}.hdf5'])
-checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
+checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(checkpointdir, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
 
 model.fit(train_ds, epochs=1000, steps_per_epoch=train_size/BATCH_SIZE, validation_data=val_ds, callbacks=[tensorboard_callback, earlystopping_callback, checkpoint_callback])
+#model.fit(train_ds, epochs=1000, steps_per_epoch=train_size/BATCH_SIZE, validation_data=val_ds)
 
 for n, pair in enumerate(test_ds.take(1)):
     image, mask = pair
@@ -168,6 +169,11 @@ plt.xticks([])
 plt.yticks([])
 plt.show()
 
+i=2
+plt.imshow(tf.squeeze(mask[i]), cmap='gray')
+plt.show()
+plt.imshow(tf.cast(tf.greater(tf.squeeze(predicted[i]),0.5),tf.float32), cmap='gray')
+plt.show()
 
 
 
