@@ -2,6 +2,12 @@
 data/
 !data/README.md
 
+# Pycharm stuff
+.idea/
+
+# Jupyter Notebook stuff
+.ipynb_checkpoints
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

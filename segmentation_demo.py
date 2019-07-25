@@ -6,7 +6,9 @@ import pathlib
 
 tf.enable_eager_execution()
 
+path = str(pathlib.Path('../data/montgomery/images/MCUCXR_0001_0.png'))
 
-image = load_image('./data/montgomery/images/MCUCXR_0001_0.png')
+image = load_image(path)
 print(image.shape)
 plt.imshow(np.squeeze(image), cmap='gray')
+plt.show()
