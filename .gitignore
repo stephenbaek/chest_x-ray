@@ -1,6 +1,7 @@
 # Everything in data folder except README
 data/
 !data/README.md
+!data/*.py
 
 <<<<<<< HEAD
 # Pycharm stuff
