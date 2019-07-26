@@ -17,8 +17,8 @@ def load_image(filepath):
     Returns:
         image: [Height, Width, Channels] tensor.
     """
-    WIDTH = 384
-    HEIGHT = 384
+    WIDTH = 256
+    HEIGHT = 256
     
     # Read raw image (string of pixel values)
     image = tf.io.read_file(filepath)

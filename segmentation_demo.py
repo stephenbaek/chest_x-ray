@@ -9,9 +9,11 @@ from datetime import datetime
 from utils.image import load_image
 from utils.image import random_transform
 
-tf.compat.v1.enable_eager_execution()
+from models.unet import UNet
 
+tf.compat.v1.enable_eager_execution()
 AUTOTUNE = tf.data.experimental.AUTOTUNE
+
 
 # TODO: This should be moved to utils?
 def mask_merge(left, right):
@@ -62,55 +64,13 @@ for n, pair in enumerate(montgomery_ds.take(4)):
     plt.xticks([])
     plt.yticks([])
     plt.show()
-
-
-# TODO(stephen-baek): put the model in a class
-input_size=(384,384,1)
-inputs = tf.keras.Input(input_size)
-conv1 = tf.keras.layers.Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(inputs)
-conv1 = tf.keras.layers.Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv1)
-pool1 = tf.keras.layers.MaxPooling2D(pool_size=(2,2))(conv1)
-conv2 = tf.keras.layers.Conv2D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(pool1)
-conv2 = tf.keras.layers.Conv2D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv2)
-pool2 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(conv2)
-conv3 = tf.keras.layers.Conv2D(256, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(pool2)
-conv3 = tf.keras.layers.Conv2D(256, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv3)
-pool3 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(conv3)
-conv4 = tf.keras.layers.Conv2D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(pool3)
-conv4 = tf.keras.layers.Conv2D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv4)
-drop4 = tf.keras.layers.Dropout(0.5)(conv4)
-pool4 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(drop4)
-
-conv5 = tf.keras.layers.Conv2D(1024, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(pool4)
-conv5 = tf.keras.layers.Conv2D(1024, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv5)
-drop5 = tf.keras.layers.Dropout(0.5)(conv5)
-
-up6 = tf.keras.layers.Conv2D(512, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(tf.keras.layers.UpSampling2D(size = (2,2))(drop5))
-merge6 = tf.keras.layers.concatenate([drop4,up6], axis = 3)
-conv6 = tf.keras.layers.Conv2D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge6)
-conv6 = tf.keras.layers.Conv2D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv6)
-
-up7 = tf.keras.layers.Conv2D(256, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(tf.keras.layers.UpSampling2D(size = (2,2))(conv6))
-merge7 = tf.keras.layers.concatenate([conv3,up7], axis = 3)
-conv7 = tf.keras.layers.Conv2D(256, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge7)
-conv7 = tf.keras.layers.Conv2D(256, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv7)
-
-up8 = tf.keras.layers.Conv2D(128, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(tf.keras.layers.UpSampling2D(size = (2,2))(conv7))
-merge8 = tf.keras.layers.concatenate([conv2,up8], axis = 3)
-conv8 = tf.keras.layers.Conv2D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge8)
-conv8 = tf.keras.layers.Conv2D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv8)
-
-up9 = tf.keras.layers.Conv2D(64, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(tf.keras.layers.UpSampling2D(size = (2,2))(conv8))
-merge9 = tf.keras.layers.concatenate([conv1,up9], axis = 3)
-conv9 = tf.keras.layers.Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge9)
-conv9 = tf.keras.layers.Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
-conv9 = tf.keras.layers.Conv2D(2, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
-conv10 = tf.keras.layers.Conv2D(1, 1, activation = 'sigmoid')(conv9)
-
-model = tf.keras.Model(inputs, conv10)
-
+    
+    
+    
+model = UNet()
+model.build(input_shape=(None,256,256,1))
 # TODO(stephen-baek): Implement IOU
-model.compile(optimizer=tf.keras.optimizers.Adam(lr=1e-3), loss='binary_crossentropy', metrics=['accuracy'])
+model.compile(optimizer=tf.keras.optimizers.Adam(lr=3e-4), loss='binary_crossentropy', metrics=['accuracy'])
 
 model.summary()
 
@@ -128,15 +88,15 @@ test_ds = test_ds.take(test_size)
 # Setting a shuffle buffer size as large as the dataset ensures that the data is
 # completely shuffled.
 # TODO: Use `tf.data.Dataset.shuffle(buffer_size, seed)` followed by `tf.data.Dataset.repeat(count)`. Static tf.data optimizations will take care of using the fused implementation.
-BATCH_SIZE=8
+BATCH_SIZE=6
 train_ds = train_ds.apply( tf.data.experimental.shuffle_and_repeat(buffer_size=train_size) )
 train_ds = train_ds.batch(BATCH_SIZE)
 train_ds = train_ds.prefetch(buffer_size=AUTOTUNE)
 
-val_ds = val_ds.batch(val_size)
+val_ds = val_ds.batch(BATCH_SIZE)
 val_ds = val_ds.prefetch(buffer_size=AUTOTUNE)
 
-test_ds = test_ds.batch(test_size)
+test_ds = test_ds.batch(BATCH_SIZE)
 
 # Tensorboard stuff
 logdir= os.path.join(*['logs', datetime.now().strftime("%Y%m%d-%H%M%S")])
@@ -146,8 +106,8 @@ tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=logdir, batch_size
 earlystopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=6)
 
 # Check point
-checkpointdir = os.path.join(*['logs', 'weights', 'weights-{epoch:02d}-{val_acc:.2f}.hdf5'])
-checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(checkpointdir, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
+checkpointdir = os.path.join(*[logdir, 'weights-{epoch:02d}-{val_acc:.4f}.hdf5'])
+checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(checkpointdir, monitor='val_acc', verbose=0, save_best_only=True, mode='max')
 
 model.fit(train_ds, epochs=1000, steps_per_epoch=train_size/BATCH_SIZE, validation_data=val_ds, callbacks=[tensorboard_callback, earlystopping_callback, checkpoint_callback])
 #model.fit(train_ds, epochs=1000, steps_per_epoch=train_size/BATCH_SIZE, validation_data=val_ds)
@@ -157,19 +117,20 @@ for n, pair in enumerate(test_ds.take(1)):
 
 predicted = model.predict(image)
 
+
+i = 3
 plt.subplot(1,2,1)
-plt.imshow(tf.concat([tf.clip_by_value(image[0]+mask[0]*0.1, 0.0, 1.0), image[0], image[0]], axis=2))
+plt.imshow(tf.concat([tf.clip_by_value(image[i]+mask[i]*0.1, 0.0, 1.0), image[i], image[i]], axis=2))
 plt.grid(False)
 plt.xticks([])
 plt.yticks([])
 plt.subplot(1,2,2)
-plt.imshow(tf.concat([tf.clip_by_value(image[0]+predicted[0]*0.5, 0.0, 1.0), image[0], image[0]], axis=2))
+plt.imshow(tf.concat([tf.clip_by_value(image[i]+predicted[i]*0.5, 0.0, 1.0), image[i], image[i]], axis=2))
 plt.grid(False)
 plt.xticks([])
 plt.yticks([])
 plt.show()
 
-i=2
 plt.imshow(tf.squeeze(mask[i]), cmap='gray')
 plt.show()
 plt.imshow(tf.cast(tf.greater(tf.squeeze(predicted[i]),0.5),tf.float32), cmap='gray')
@@ -183,13 +144,10 @@ plt.show()
 
 
 
-
-path = str(pathlib.Path('../data/montgomery/images/MCUCXR_0001_0.png'))
-
-<<<<<<< HEAD
-image = load_image(path)
-print(image.shape)
-plt.imshow(np.squeeze(image), cmap='gray')
-plt.show()
-=======
->>>>>>> 83763bb4b48d18874c93403536c7e96925bc8eca
+#
+#path = str(pathlib.Path('../data/montgomery/images/MCUCXR_0001_0.png'))
+#
+#image = load_image(path)
+#print(image.shape)
+#plt.imshow(np.squeeze(image), cmap='gray')
+#plt.show()
