@@ -111,22 +111,23 @@ def map_image(image, map_from, interpolation='Nearest'):
         new_image: [Height, Width, Channels]. A new image of the same size as the input.
     """
     height, width, channels = image.shape
+    to_height, to_width = (map_from.shape[0], map_from.shape[1])
     
     flattened = tf.reshape(image, [height*width, channels])  # flatten the input
     
     # We'll create a dummy pixel at the end of the flattened image and make
     # the out of bounds pixels refer to the dummy pixel.
-    out_of_bounds = tf.cast(flattened.shape[0], tf.int32)  # pointer to the dummy pixel
+    out_of_bounds = tf.cast(flattened.shape[0], tf.int64)  # pointer to the dummy pixel
     flattened = tf.concat([flattened,  tf.zeros([1,channels], flattened.dtype)], axis=0)
     
     # Flatten the map_from tensor in the same way and split x, y coords.
-    map_from = tf.reshape(map_from, [height*width, 2])
+    map_from = tf.reshape(map_from, [to_height*to_width, 2])
     map_from_x, map_from_y = tf.unstack(map_from, axis=1)
     
     # Interpolation
     if interpolation=='Nearest':
-        interp_x = tf.cast(tf.math.round(map_from_x), tf.int32)
-        interp_y = tf.cast(tf.math.round(map_from_y), tf.int32)
+        interp_x = tf.cast(tf.math.round(map_from_x), tf.int64)
+        interp_y = tf.cast(tf.math.round(map_from_y), tf.int64)
     elif interpolation=='Bilinear':
         raise Exception('Current version of `map_image` does not support the option `Bilinear`. Use `Nearest` instead.')
     else:
@@ -134,7 +135,7 @@ def map_image(image, map_from, interpolation='Nearest'):
     
     # Coordinates to indices. Assign the dummy pixel pointer to out of bounds pixels
     ind = interp_y*width + interp_x
-    out_of_bounds = tf.tile([out_of_bounds], [tf.cast(ind.shape[0], tf.int32)])  # tf.where does not support broadcasting
+    out_of_bounds = tf.tile([out_of_bounds], [tf.cast(ind.shape[0], tf.int64)])  # tf.where does not support broadcasting
     ind = tf.where(tf.less(interp_x, 0), out_of_bounds, ind)
     ind = tf.where(tf.less(interp_y, 0), out_of_bounds, ind)
     ind = tf.where(tf.greater_equal(interp_x, width), out_of_bounds, ind)
@@ -142,7 +143,7 @@ def map_image(image, map_from, interpolation='Nearest'):
     
     # Gather pixels based on the indices and return new image
     mapped = tf.gather(flattened, ind)
-    mapped = tf.reshape(mapped, [height, width, channels])
+    mapped = tf.reshape(mapped, [to_height, to_width, channels])
     
     return mapped
     
