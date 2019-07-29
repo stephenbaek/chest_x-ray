@@ -2,6 +2,8 @@
 
 '''
 import tensorflow as tf
+import os
+import shutil
 import pathlib
 import random
 import numpy as np
@@ -49,7 +51,68 @@ def random_transform(image, mask, trans_range=0.0, rot_range=0.0, scale_range=0.
     return image, mask
 
 # TODO: Validation set: Turn off augmentation
+# TODO: Data download needs to be tested
 def montgomery(shuffle=True, size=(256,256), trans_range=10.0, rot_range=np.pi/24, scale_range=0.1, shear_range=0.05, lens_range=0.1):
+    # If no data folder is found, download the data
+    # TODO: Modularize things
+    if not os.path.isdir(os.path.join(*[os.getcwd(),'data','montgomery'])):
+        data_root_orig = tf.keras.utils.get_file('montgomery.zip',
+                                                 'http://openi.nlm.nih.gov/imgs/collections/NLM-MontgomeryCXRSet.zip',
+                                                 extract=True,
+                                                 cache_subdir=os.path.join(*[os.getcwd(),'data']))
+        # Remove the zip file
+        try:
+            os.remove(os.path.join(*['data', 'montgomery.zip']))
+        except OSError as e:
+            print('dataset.montgomery: ', e)
+        # Clean up unnecessary stuff that comes with the ZIP file
+        try:
+            shutil.rmtree(os.path.join(*['data', '__MACOSX']))
+        except OSError as e:
+            print('dataset.montgomery: ', e)
+        # rename folders
+        try:
+            from_dir = os.path.join(*['data', 'MontgomerySet'])
+            to_dir = os.path.join(*['data', 'montgomery'])
+            os.mkdir(to_dir)
+            for file in os.listdir(from_dir):
+                shutil.move(os.path.join(from_dir, file), to_dir)
+            os.rmdir(from_dir)
+        except OSError as e:
+            print('dataset.montgomery: ', e)
+        try:
+            from_dir = os.path.join(*['data', 'montgomery', 'ClinicalReadings'])
+            to_dir = os.path.join(*['data', 'montgomery', 'clinical_readings'])
+            os.mkdir(to_dir)
+            for file in os.listdir(from_dir):
+                shutil.move(os.path.join(from_dir, file), to_dir)  
+            os.rmdir(from_dir)
+        except OSError as e:
+            print('dataset.montgomery: ', e)
+        try:
+            from_dir = os.path.join(*['data', 'montgomery', 'CXR_png'])
+            to_dir = os.path.join(*['data', 'montgomery', 'images'])
+            os.mkdir(to_dir)
+            for file in os.listdir(from_dir):
+                shutil.move(os.path.join(from_dir, file), to_dir)  
+            os.rmdir(from_dir)
+        except OSError as e:
+            print('dataset.montgomery: ', e)
+        try:
+            from_dir = os.path.join(*['data', 'montgomery', 'ManualMask'])
+            to_dir = os.path.join(*['data', 'montgomery', 'masks'])
+            os.mkdir(to_dir)
+            for file in os.listdir(from_dir):
+                shutil.move(os.path.join(from_dir, file), to_dir)
+            os.rmdir(from_dir)
+        except OSError as e:
+            print('dataset.montgomery: ', e)
+        try:
+            os.rename(os.path.join(*['data', 'montgomery', 'NLM-MontgomeryCXRSet-ReadMe.pdf']),
+            os.path.join(*['data', 'montgomery', 'README.pdf']))
+        except OSError as e:
+            print('dataset.montgomery: ', e)
+            
     data_root = pathlib.Path('./data/montgomery')
     # read image paths using glob and convert them into string format
     image_paths = [str(path) for path in list(data_root.glob('images/*.png'))]
