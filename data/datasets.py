@@ -50,6 +50,7 @@ def random_transform(image, mask, trans_range=0.0, rot_range=0.0, scale_range=0.
 #    
     return image, mask
 
+
 # TODO: Validation set: Turn off augmentation
 # TODO: Data download needs to be tested
 def montgomery(shuffle=True, size=(256,256), trans_range=10.0, rot_range=np.pi/24, scale_range=0.1, shear_range=0.05, lens_range=0.1):
@@ -108,8 +109,34 @@ def montgomery(shuffle=True, size=(256,256), trans_range=10.0, rot_range=np.pi/2
         except OSError as e:
             print('dataset.montgomery: ', e)
         try:
+            from_dir = os.path.join(*['data', 'montgomery', 'masks', 'leftMask'])
+            to_dir = os.path.join(*['data', 'montgomery', 'masks', 'right']) # I think the original dataset has left and right confused
+            os.mkdir(to_dir)
+            for file in os.listdir(from_dir):
+                shutil.move(os.path.join(from_dir, file), to_dir)
+            os.rmdir(from_dir)
+        except OSError as e:
+            print('dataset.montgomery: ', e)
+        try:
+            from_dir = os.path.join(*['data', 'montgomery', 'masks', 'rightMask'])
+            to_dir = os.path.join(*['data', 'montgomery', 'masks', 'left']) # I think the original dataset has left and right confused
+            os.mkdir(to_dir)
+            for file in os.listdir(from_dir):
+                shutil.move(os.path.join(from_dir, file), to_dir)
+            os.rmdir(from_dir)
+        except OSError as e:
+            print('dataset.montgomery: ', e)
+        try:
             os.rename(os.path.join(*['data', 'montgomery', 'NLM-MontgomeryCXRSet-ReadMe.pdf']),
             os.path.join(*['data', 'montgomery', 'README.pdf']))
+        except OSError as e:
+            print('dataset.montgomery: ', e)
+        # Clean up .DS_Store
+        try:
+            os.remove(os.path.join(*['data', 'montgomery', '.DS_Store']))
+            os.remove(os.path.join(*['data', 'montgomery', 'masks', '.DS_Store']))
+            os.remove(os.path.join(*['data', 'montgomery', 'images', 'Thumbs.db']))
+            os.remove(os.path.join(*['data', 'montgomery', 'masks', 'right', 'Thumbs.db']))
         except OSError as e:
             print('dataset.montgomery: ', e)
             
