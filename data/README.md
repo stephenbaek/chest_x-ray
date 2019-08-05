@@ -47,4 +47,10 @@ data
 
 ## NIH Chest X-ray Dataset
 ```
+https://www.kaggle.com/nih-chest-xrays/data
+```
+
+## CheXpert
+```
+https://stanfordmlgroup.github.io/competitions/chexpert/
 ```
