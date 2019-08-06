@@ -1,6 +1,17 @@
 # Everything in data folder except README
 data/
 !data/README.md
+!data/__init__.py
+!data/datasets.py
+
+# Pycharm stuff
+.idea/
+
+# Jupyter Notebook stuff
+.ipynb_checkpoints
+
+# Ignore tensorboard logs
+logs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
